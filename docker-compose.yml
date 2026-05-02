@@ -1,75 +1,53 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
       - .env
     expose:
       - "5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+    restart: always
 
   redis:
-    image: redis:7-alpine
+    image: redis:7
     volumes:
       - redis_data:/data
     expose:
       - "6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+    restart: always
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     volumes:
-      - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     env_file:
       - .env
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - db
+      - redis
     expose:
       - "8000"
     command: >
-      sh -c "sleep 5 &&
-             python manage.py makemigrations users courses payments &&
+      sh -c "sleep 10 &&
              python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000"
-    restart: unless-stopped
+    restart: always
 
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - .:/app
+    build: .
     env_file:
       - .env
     depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_healthy
+      - redis
+      - db
     command: celery -A config worker -l INFO
-    restart: unless-stopped
+    restart: always
 
   nginx:
-    image: nginx:1.25-alpine
+    image: nginx:1.25
     ports:
       - "80:80"
     volumes:
@@ -78,7 +56,7 @@ services:
       - media_volume:/media
     depends_on:
       - app
-    restart: unless-stopped
+    restart: always
 
 volumes:
   postgres_data:
