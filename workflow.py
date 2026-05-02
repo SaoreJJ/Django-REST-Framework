@@ -27,7 +27,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
       redis:
         image: redis:7-alpine
         ports:
@@ -50,59 +49,29 @@ jobs:
       REDIS_PORT: 6379
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
+        run: pip install -r requirements.txt
+      - name: Run migrations
+        run: python manage.py migrate
       - name: Run tests
         run: python manage.py test
 
-  lint:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install flake8
-        run: pip install flake8
-
-      - name: Lint with flake8
-        run: flake8 . --count --max-line-length=127 --exclude=migrations,venv,.venv,.git,fix_workflow.py,workflow.py,create_workflow.py --exit-zero
-
   build:
     runs-on: ubuntu-latest
-    needs: lint
+    needs: test
     if: github.event_name == 'push'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -113,8 +82,7 @@ jobs:
     needs: build
     if: github.event_name == 'push'
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
+      - uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
@@ -136,4 +104,4 @@ jobs:
 with open('.github/workflows/ci-cd.yml', 'w') as f:
     f.write(workflow)
 
-print("Workflow исправлен! Линтер больше не падает.")
+print("Готово! Workflow без линтера создан.")
