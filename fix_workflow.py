@@ -1,4 +1,6 @@
-name: CI/CD Pipeline
+import os
+
+workflow = """name: CI/CD Pipeline
 
 on:
   push:
@@ -127,3 +129,9 @@ jobs:
             docker compose up -d --build
             docker compose exec -T app python manage.py migrate
             docker compose exec -T app python manage.py collectstatic --noinput
+"""
+
+with open('.github/workflows/ci-cd.yml', 'w') as f:
+    f.write(workflow)
+
+print("Workflow исправлен!")
