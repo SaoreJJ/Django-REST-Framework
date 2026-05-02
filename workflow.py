@@ -1,7 +1,3 @@
-import os
-
-os.makedirs('.github/workflows', exist_ok=True)
-
 workflow = """name: CI/CD Pipeline
 
 on:
@@ -15,30 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15-alpine
+        image: postgres:15
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
       redis:
-        image: redis:7-alpine
+        image: redis:7
         ports:
           - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
-      SECRET_KEY: test-secret-key
+      SECRET_KEY: test-key
       DEBUG: "True"
       POSTGRES_DB: test_db
       POSTGRES_USER: test_user
@@ -47,7 +32,6 @@ jobs:
       DB_PORT: 5432
       REDIS_HOST: localhost
       REDIS_PORT: 6379
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,9 +44,22 @@ jobs:
       - name: Run tests
         run: python manage.py test
 
-  build:
+  lint:
     runs-on: ubuntu-latest
     needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install flake8
+        run: pip install flake8
+      - name: Lint with flake8
+        run: flake8 . --count --max-line-length=127 --exclude=migrations,venv,.venv,.git --exit-zero
+
+  build:
+    runs-on: ubuntu-latest
+    needs: lint
     if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -82,18 +79,15 @@ jobs:
     needs: build
     if: github.event_name == 'push'
     steps:
-      - uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/drf-project
-            if [ -d ".git" ]; then
-              git pull origin feture/task-01
-            else
-              git clone -b feture/task-01 https://github.com/SaoreJJ/Django-REST-Framework.git .
-            fi
+            git pull origin feture/task-01
             echo "${{ secrets.ENV_FILE }}" > .env
             docker compose down
             docker compose up -d --build
@@ -104,4 +98,3 @@ jobs:
 with open('.github/workflows/ci-cd.yml', 'w') as f:
     f.write(workflow)
 
-print("Готово! Workflow без линтера создан.")
