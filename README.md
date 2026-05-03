@@ -1,14 +1,36 @@
-# Проект онлайн-обучения
+readme = """# Платформа онлайн-обучения (DRF)
 
-## Запуск
+REST API для платформы онлайн-обучения на Django REST Framework с автоматическим CI/CD и деплоем на сервер.
 
-1. Клонировать репозиторий
-2. `cp .env.example .env` и заполнить SECRET_KEY и пароли
-3. `docker-compose up -d --build`
-4. `docker-compose exec app python manage.py createsuperuser`
-5. Открыть http://localhost
+## Технологический стек
 
-## Команды
+- **Backend:** Python 3.11, Django 4.2, Django REST Framework
+- **База данных:** PostgreSQL 15
+- **Кеш/Брокер:** Redis 7
+- **Фоновые задачи:** Celery
+- **Web-сервер:** Nginx + Gunicorn
+- **Контейнеризация:** Docker, Docker Compose
+- **CI/CD:** GitHub Actions
 
-- Логи: `docker-compose logs -f`
-- Остановить: `docker-compose down`
+## Структура сервисов
+
+| Сервис | Технология | Внутренний порт | Внешний порт |
+|--------|------------|-----------------|--------------|
+| app | Django + Gunicorn | 8000 | - |
+| db | PostgreSQL 15 | 5432 | - |
+| redis | Redis 7 | 6379 | - |
+| celery | Celery worker | - | - |
+| nginx | Nginx | 80 | 80 |
+
+## Быстрый старт (локально)
+
+### Предварительные требования
+
+- Docker и Docker Compose
+- Git
+
+### 1. Клонирование репозитория
+
+```bash
+git clone https://github.com/SaoreJJ/Django-REST-Framework.git
+cd Django-REST-Framework
